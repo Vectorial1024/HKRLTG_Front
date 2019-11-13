@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>探路 Pathfinder</title>
+        <meta charset="UTF-16">
+        <meta name="description" content="為港鐵跣底嗰陣買定個保險。一經載入，毋須上網，輕鬆離線查找。" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Previous version JS references -->
+        <!--
+        <script src="database_AllLines.js"></script>
+        <script src="database_StationUtils.js"></script>
+        <script src="database_ShortID.js"></script>
+        <script src="station_utilities.js"></script>
+        <script src="line_utilities.js"></script>
+        <script src="interchange_manager.js"></script>
+        -->
+        <!-- TypeScript JS scripts -->
+        <!--Import Google Icon Font-->
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <!--Import materialize.css-->
+        <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
+        <link type="text/css" rel="stylesheet" href="css/common.css" rel="stylesheet">
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+        <!-- From basic to complex -->
+        <script src="src/waypoint.js"></script>
+        <script src="src/line.js"></script>
+        <script src="src/ferryline.js"></script>
+        <script src="src/connection.js"></script>
+        <script src="src/path.js"></script>
+        <!-- Library-styled scripts -->
+        <script src="src/waypointlibrary.js"></script>
+        <script src="src/linetype.js"></script>
+        <script src="src/linelibrary.js"></script>
+        <script src="src/pathfinder.js"></script>
+        <script src="src/mtrSelector.js"></script>
+        <!-- Supplementary interchange scripts -->
+        <script src="src/interchange.js"></script>
+        <script src="src/interchangeeffect.js"></script>
+        <script src="src/interchangerules.js"></script>
+        <!-- Main script: controlling everything from a centralized control. -->
+        <script src="src/mainscript.js"></script>
+        <!-- Supporting scripts -->
+        <script src="src/httprequest.js"></script>
+        <script src="src/latestcommit.js"></script>
+        <script src="src/pathfindermode.js"></script>
+        <!-- Basic traffic analytics -->
+        <script src="src/analytics.js"></script>
+        <script>
+            var fromSelector;
+            var toSelector;
+
+            /**
+             * Mechanically swaps the buttons in FROM and TO.
+             */
+            function swapFromAndTo()
+            {
+                // Save values before swapping
+                let fromLine = document.getElementById("fromLine").selectedIndex;
+                let fromStation = document.getElementById("fromStation").selectedIndex;
+                let toStation = document.getElementById("toStation").selectedIndex;
+                // Swap lines
+                document.getElementById("fromLine").selectedIndex = document.getElementById("toLine").selectedIndex;
+                document.getElementById("toLine").selectedIndex = fromLine;
+                // Force update of the station dropdown first before we apply the values
+                // Otherwise, since the changed event is never fired, strange items will be chosen.
+                fromSelector.updateDropdown();
+                toSelector.updateDropdown();
+                // Finally re-selecting the stations
+                document.getElementById("fromStation").selectedIndex = toStation;
+                document.getElementById("toStation").selectedIndex = fromStation;
+            }
+
+            /**
+             * A wrapper to signal the correct MTRSelector to update itself.
+             */
+            function event_LineChanged()
+            {
+                console.log("Event Change",fromSelector);
+                if (this.id == "fromLine")
+                {
+                    fromSelector.updateDropdown();
+                }
+                else
+                {
+                    toSelector.updateDropdown();
+                }
+            }
+
+            function signal_BeginSearch()
+            {
+                let generalFeedback = document.getElementById("search_criteria");
+                let searchModeFeedback = document.getElementById("search_mode")
+                let directLineFeedback = document.getElementById("search_lv0");
+                let interchangeLineFeedback = document.getElementById("search_lv1");
+                let resultTable = document.getElementById("results");
+                conductSearch(fromSelector, toSelector, generalFeedback, searchModeFeedback, directLineFeedback, interchangeLineFeedback, resultTable);
+                return;
+            }
+
+            function chart_Show()
+            {
+                document.getElementById("chartsDiv").style.display = "block";
+            }
+
+            function chart_Hide()
+            {
+                document.getElementById("chartsDiv").style.display = "none";
+            }
+
+            /**
+             * Do all your initialization here.
+             */
+            function initializeComponents()
+            {
+                // Print some database stats.
+                prepareDatabaseStats(document.getElementById("db_stats_count"));
+
+                // Print version info. Already handles HTTP errors, etc.
+                obtainLatestCommitTimestanp(document.getElementById("versionInfo"));
+                // Traffic analytics seem not to work properly.
+                //obtainTrafficAnalytics(document.getElementById("trafficInfo"));
+
+                // Initialize the two MTRSelectors.
+                fromSelector = new MTRSelector(document.getElementById("fromLine"), document.getElementById("fromStation"));
+                toSelector = new MTRSelector(document.getElementById("toLine"), document.getElementById("toStation"));
+
+                // Add some signal-change detectors.
+                document.getElementById("fromLine").addEventListener("change", event_LineChanged);
+                document.getElementById("toLine").addEventListener("change", event_LineChanged);
+
+                // Reset the MTRSelectors, such that the dropdown is immediately usable when the user "previous-pages" into this page.
+                fromSelector.initializeDropdown();
+                toSelector.initializeDropdown();
+
+                fromSelector.updateDropdown();
+                toSelector.updateDropdown();
+
+                // Initialize the results table.
+                clearResultDisplay(document.getElementById("results"));
+
+                // Initialize search mode detector
+                initializePathfinderModeDetectors();
+
+                // Integrated method to register this visit and prepare the hit-counter badge
+                prepareHitsShield(document.getElementById("hit_shield"));
+            }
+
+            document.addEventListener("DOMContentLoaded", initializeComponents);
+        </script>
+        <style>
+            *
+            {
+                font-family: Microsoft JhengHei, Microsoft YaHei, STXihei
+            }
+/* 
+            table
+            {
+                overflow-x: auto;
+                border-collapse: collapse;
+                width: 100%;
+            }
+
+            td, th
+            {
+                border: 1px solid #dddddd;
+                text-align: left;
+                padding: 8px;
+            }
+
+            tr:nth-child(even)
+            {
+                background-color: #dddddd;
+            } */
+        </style>
+    </head>
+    <body>
+    <div class="container">
+        <!-- Headers -->
+        <!-- Changed from h1 to h4 to adapt to the new Materialize CSS -->
+        <h4>探路：港鐵替代路線搜尋器</h4>
+        <p>
+            為港鐵跣底嗰陣買定個保險。<b>一經載入，毋須上網，輕鬆離線搜尋。</b>
+            <!--
+            <a class="black-text link" href="">Temporary English version</a>
+            -->
+            <br>
+            資料庫持續擴充中，資料亦會儲齊一堆才更新(好似茶樓炒飯咁)。<br>
+            資料不齊全會令搜尋器搜出不合理結果。如因資料不全，而未能顯示乘車資訊，或展示奇怪資訊，請見諒！<br>
+            <!-- Shields.IO badges -->
+            <a href="https://github.com/trafficguide/alt-routes" target="_blank"><img alt="GitHub Repo Main Page" src="https://img.shields.io/badge/GitHub%20Repo-Click%20here%20to%20enter-blue"></a>
+            <a href="https://materializecss.com" target="_blank"><img alt="Materialize CSS Link" src="https://img.shields.io/badge/Uses-Materialize%20CSS-blue"></a>
+            <a href="https://shields.io" target="_blank"><img alt="Shields.IO Link" src="https://img.shields.io/badge/Uses-Shields.io-blue"></a>
+            <a href="https://www.typescriptlang.org" target="_blank"><img alt="TypeScript Link" src="https://img.shields.io/badge/Uses-TypeScript-blue"></a>
+            <a href="https://hitcounter.pythonanywhere.com/" target="_blank"><img alt="Hitcounter Link" src="https://img.shields.io/badge/Uses-Hit Counter-blue"></a>
+            <!-- The original page hits is back, but I am leaning to change its appeareance using shields.io; scripts are already set up. -->
+            <!-- As a matter of documentation, we previously used this link: https://hitcounter.pythonanywhere.com/count/tag.svg?url=https%3A%2F%2Ftrafficguide.github.io%2Falt-routes%2F -->
+            <img id="hit_shield" alt="Hit Count Info" src="https://img.shields.io/badge/瀏覽量-載入中...-lightgrey">
+            <a href="https://github.com/trafficguide/alt-routes/graphs/contributors" target="_blank"><img alt="GitHub Repo Contributors" src="https://img.shields.io/github/contributors/trafficguide/alt-routes"></a>
+            <a href="https://github.com/trafficguide/alt-routes/issues" target="_blank"><img alt="GitHub Repo Issues Page" src="https://img.shields.io/github/issues/trafficguide/alt-routes"></a>
+            <a href="https://github.com/trafficguide/alt-routes/blob/master/LICENSE" target="_blank"><img alt="GitHub Repo License" src="https://img.shields.io/github/license/trafficguide/alt-routes"></a>
+            <a href="https://github.com/trafficguide/alt-routes/network/members" target="_blank"><img alt="GitHub Repo Forks" src="https://img.shields.io/github/forks/trafficguide/alt-routes?style=social"></a>
+            <br>
+            <!-- Second row of badges -->
+            <!-- Call-for-action badges asking for more info -->
+            <img alt="Info: Green Minibus" src="https://img.shields.io/badge/現正徵求-綠巴路線資料-orange">
+            <img alt="Info: Red Minibus" src="https://img.shields.io/badge/現正徵求-紅巴路線資料-orange">
+            <img alt="Info: Red Minibus" src="https://img.shields.io/badge/現正徵求-渡輪街渡資料-orange">
+        </p>
+        <!-- Cached transit maps -->
+        <p>
+            <a class="waves-effect waves-light btn orange darken-3" onclick="chart_Show()"><i class="material-icons left">map</i>展示乘車大圖</a>
+            <a class="waves-effect waves-light btn orange darken-3" onclick="chart_Hide()"><i class="material-icons left">unfold_less</i>收起大圖</a>
+            <a class="waves-effect waves-light btn orange darken-3" onclick="document.location.reload(true)"><i class="material-icons left">cached</i>重新載入【探路】</a>
+            <br>
+            <div id="chartsDiv" style="display: none;">
+                <p>
+                    頭盔：以下所有大圖都係來自連登，放喺呢度嘅目的只係用嚟整合已有資訊，並無偷圖之意，資訊亦都係只供參考。
+                </p>
+                <p>
+                    過海大圖：2019 年 10 月底於連登廣為流傳 (例如見於連登 <a href="https://lihkg.com/thread/1681675/page/1">有無人用緊有線1000M光纖寬頻？ (1681675) #2</a>)
+                    <br>
+                    <img id="chart_crossharbour" alt="Big pic: Cross Harbour" src="img/Instant_CrossHarbour.jpg" style="max-width: 500px; height: auto;">
+                </p>
+                <p>
+                    乘車大圖：見於連登 <a href="https://lihkg.com/thread/1637117/page/13">【必看】搭巴士內功心法 (1637117) #312</a>。
+                    <br>
+                    <img id="chart_normal" alt="Big pic: Normal" src="img/Instant_NormalMode.jpg" style="max-width: 500px;">
+                    <br>
+                    <img id="chart_night" alt="Big pic: Night" src="img/Instant_NightMode.jpg" style="max-width: 500px;">
+                </p>
+            </div>
+        </p>
+        <p>
+            <!-- Other divs -->
+            <div id="versionInfo"></div>
+            <div id="trafficInfo"></div>
+            <div>
+                <b>路線資料齊全認可</b>：<br>
+                <img alt="Shing Mun Tunnel" src="https://img.shields.io/badge/城門隧道-只有全日路線-yellow">
+                <img alt="Tsing Sha Highway" src="https://img.shields.io/badge/青沙公路-只有全日路線-yellow">
+                <img alt="Tram Lines" src="https://img.shields.io/badge/電車-全部路線齊備-brightgreen">
+            </div>
+            
+            <!-- Link to feedback/collaboration -->
+            <a class="black-text link" href="https://docs.google.com/forms/d/e/1FAIpQLSeeID8c0JpELbUfUQMyG1d7OLSJ_v5IBQzu00nYJwcDw-y2Ew/viewform" target="_blank">意見反映</a> |
+            <a class="black-text link" href="https://docs.google.com/spreadsheets/d/1NTAl6hq-Mh4KsR8vFxvFazFxYB0iYS-3oAyuSb7seDU/edit?usp=sharing" target="_blank">協助輸入路線資料</a> |
+            <a class="black-text link" href="districtsplitterinfo.html" target="_blank">協助搜尋器分區</a>
+            <!--
+                It was found that the Google My Maps function does not work very well...
+                 | <a href="https://drive.google.com/open?id=1QknSh3gFDDT9wo-kpQpLMXHZU8xN4-jo&usp=sharing" target="_blank">區域劃分大圖 (Experimental)</a>
+            -->
+        </p>
+        <!-- Selections -->
+        <!-- Changed from h2 to h5 to adapt to the new Materialize CSS -->
+        <h5>搜尋目標</h5>
+        <p>
+            起點
+            <div class="input-field col s12">
+                <select id="fromLine">
+                    <option value="0" disabled selected>---</option>
+                </select>
+                <select id="fromStation">
+                    <option value="0" disabled selected>---</option>
+                </select>
+            </div>
+        </p>
+        
+        <p>
+            終點
+            <div class="input-field col s12">
+                <select id="toLine">
+                    <option value="0">---</option>
+                </select>
+                <select id="toStation">
+                    <option value="0">---</option>
+                </select>
+            </div>
+        </p>
+        <p>
+            <label>
+                <input class="checkbox-orange" type="checkbox" id="cbxTransit" onclick="confirmChoiceFor_3X(this)"/>
+                <span>容許搜尋三次轉車</span>
+            </label>
+        </p>
+        <p>
+            <label>
+                <input class="checkbox-orange" type="checkbox" id="cbxTimeNow" onclick="" checked/>
+                <span>包括即時尾班車資訊 (未開通)</span>
+            </label>
+        </p>
+
+        <!-- <label><input type="checkbox" onclick="confirmChoiceFor_3X(this)">容許搜尋三次轉車</input></label> -->
+        <br>
+
+        <!--
+        <p>
+            <label><input type="radio" name="searchMode" value="usual" checked>正常模式</label><br>
+            <label><input type="radio" name="searchMode" value="commute">晨昏模式 (未開通)</label><br>
+            <label><input type="radio" name="searchMode" value="night">深宵模式 (未開通)</label><br>
+        </p>
+        -->
+        
+        <!-- Radio buttons for search modes -->
+        <p>
+            <label>
+                <input class="with-gap" name="searchMode" type="radio" value="usual" checked />
+                <span>正常模式</span>
+            </label>
+        </p>
+        <p>
+            <label>
+                <input class="with-gap" name="searchMode" type="radio" value="commute" />
+                <span>通勤模式</span>
+            </label>
+        </p>
+        <p>
+            <label>
+                <input class="with-gap" name="searchMode" type="radio"  value="night"/>
+                <span>深宵模式</span>
+            </label>
+        </p>
+
+        <!-- Buttons to actually signal the search -->
+        <p>
+            <!-- Buttons -->
+            <a class="waves-effect waves-light btn orange darken-3" onclick="signal_BeginSearch()"><i class="material-icons left">search</i>搜尋</a>
+            <a class="waves-effect waves-light btn orange darken-3" onclick="swapFromAndTo()"><i class="material-icons left">import_export</i>互換</a>
+
+            <!-- <button type="button" onclick="signal_BeginSearch()">查找</button>
+            <button type="button" onclick="swapFromAndTo()">互換</button> -->
+        </p>
+        
+        <!-- Result printout -->
+        <!-- Changed from h2 to h5 to adapt to the new Materialize CSS -->
+        <h5>搜尋結果</h5>
+        <div id="db_stats_count">資料庫共存有項路線資料。</div>
+        <div id="search_criteria"></div>
+        <div id="search_mode"></div>
+        <div id="search_lv0"></div>
+        <div id="search_lv1"></div>
+        <div id="externalLinkInfo">本網頁有超連結，連結至其他網站，以查閱路線詳細資訊，包括<b>實際走線</b>、<b>車資</b>及<b>車程</b>。</div>
+        <div id="timeCostInfo">每行最左列均會展示<b>車程系數</b>，展示該乘車選項的大概車程(已包括候車時間)，系數越高代表車程越長。</div>
+        <!-- (未開通) 按下每行最左列，即可查看各路線之<b>服務時間</b>。-->
+
+        <div id="demo">
+
+        </div>
+        <div id="results" style="overflow-x:auto;">
+
+        </div>
+        <p id="quotation" style="font-size: 12px;">
+            "Freedom is not about choosing A because others say A is the best;
+            freedom is about being offered A, B, C, ..., being able to scrutinize them all, and,
+            empowered by values and truths, choosing A all by yourself because you determine that A truly is the best."
+        </p>
+
+        <!--JavaScript at end of body for optimized loading-->
+        <script type="text/javascript" src="js/materialize.min.js"></script>
+        <script type="text/javascript">
+        $(document).ready(function() {
+            //$('select').formSelect();
+        });
+        </script>
+    </body>
+</html>
