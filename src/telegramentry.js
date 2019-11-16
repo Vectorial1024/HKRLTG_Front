@@ -5,24 +5,44 @@ var TelegramEntry = /** @class */ (function () {
         this.author = rawEntry.author;
         this.text = rawEntry.text;
     }
+    TelegramEntry.prototype.generateHTMLForContent = function () {
+        var result = "<p>";
+        // Begin.
+        var tempText = this.text;
+        // Convert \_ back into _
+        console.log(tempText);
+        tempText = tempText.replace(/\\_/g, "_");
+        console.log(tempText);
+        // Convert double-returns to paragraph breaks.
+        tempText = tempText.replace(/\n\n/g, "</p><p>");
+        // Conversion complete.
+        result += tempText;
+        // Complete.
+        result += "</p>";
+        return result;
+    };
     TelegramEntry.prototype.generateExemplaryRow = function () {
-        return "<tr><td>Sample Entry @ Month/Day/Year, Time-In-Day, local time<br>Post content<br>Reddit Live link</td></tr>";
+        return "Sample Entry @ Month/Day/Year, Time-In-Day, local time<p>Post content</p>Reddit Live link<hr>";
     };
     TelegramEntry.prototype.generateTableRow = function () {
         var resultString = "<tr><td>";
+        resultString = "";
         var redditLiveEndpoint = "https://www.reddit.com/live/133sixros7tu5/updates/";
         // Processing
         // Date first:
         resultString += "Entry @ " + new Date(this.timestamp * 1000).toLocaleString("en-US", { timeZone: "Asia/Hong_Kong" });
-        resultString += ", local time<br>";
+        resultString += ", Hong Kong time<br>";
+        //console.log(this.generateHTMLForContent())
         // Content first
-        resultString += this.text;
-        resultString += "<br>Reddit Live link: ";
+        resultString += this.generateHTMLForContent();
+        resultString += "Reddit Live link: ";
         var redditLink = redditLiveEndpoint + this.redditID;
         resultString += "<a href='" + redditLink + "' target='_blank'>" + this.redditID + "</a>";
         //resultString += "</p>";
         // Output
-        resultString += "</td></tr>";
+        //resultString += "</td></tr>";
+        // Separator
+        resultString += "<hr>";
         //console.log(resultString);
         return resultString;
     };

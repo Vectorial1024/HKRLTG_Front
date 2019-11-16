@@ -1,3 +1,8 @@
+function initialize()
+{
+    initializeCurrentTimeInput();
+}
+
 function initializeCurrentTimeInput()
 {
     let nowVanilla = new Date();
@@ -5,7 +10,8 @@ function initializeCurrentTimeInput()
     let hours = nowVanilla.getUTCHours();
     let minutes = nowVanilla.getUTCMinutes();
     hours = (hours + 8) % 24;
-    let properTime = hours + ":" + minutes;
+    // We need to fill in the 0 to make it double-digit
+    let properTime = ("0" + hours).slice(-2) + ":" + ("0" + minutes).slice(-2);
     (document.getElementsByName('toStampTime')[0] as HTMLInputElement).value = properTime;
     console.log(properTime)
 }
@@ -26,10 +32,8 @@ function getToTimeStamp(): number
     return new Date(rawDate + "T" + rawTime).valueOf() / 1000;
 }
 
-function conductSearch(printingLocation: HTMLDivElement)
+function startStandardSearch(printingLocation: HTMLDivElement)
 {
-    printingLocation.innerHTML = "Contacting server...";
-
     let trueFromStamp = getFromTimestamp();
     let trueToStamp = getToTimeStamp();
 
@@ -43,9 +47,38 @@ function conductSearch(printingLocation: HTMLDivElement)
         // Also update the input stuff.
     }
 
+    conductSearch(printingLocation, new Date(trueFromStamp * 1000), new Date(trueToStamp * 1000));
+}
+
+function startPastHourSearch(printingLocation: HTMLDivElement, hoursRange: number)
+{
+    let now = new Date();
+    // 1 hour = 3600 seconds
+    let timeChange = 3600000 * hoursRange;
+    conductSearch(printingLocation, new Date(now.valueOf() - timeChange), now);
+}
+
+function startTodaySearch(printingLocation: HTMLDivElement)
+{
+    let now = new Date();
+    let todayString = now.toISOString().slice(0, 10);
+    let todayBeginning = new Date(todayString);
+    conductSearch(printingLocation, todayBeginning, now);
+}
+
+function conductSearch(printingLocation: HTMLDivElement, fromStamp: Date, toStamp: Date)
+{
+    let fromStamp_String = fromStamp.toLocaleString("en-US", {timeZone: "Asia/Hong_Kong"});
+    let toStamp_String = toStamp.toLocaleString("en-US", {timeZone: "Asia/Hong_Kong"});
+    document.getElementById("searchParams").innerHTML = "Searching posts from " + fromStamp_String + " to " + toStamp_String + ", Hong Kong time.";
+    printingLocation.innerHTML = "Contacting server...";
+
+    console.log(fromStamp.valueOf())
+    console.log(toStamp.valueOf())
+
     // Generate HTTP endpoint URL
     let apiEndpoint = "https://redditlive.norrisng.ca/api/get_posts?";
-    let callingURL = apiEndpoint + "from=" + trueFromStamp + "&to=" + trueToStamp;
+    let callingURL = apiEndpoint + "from=" + Math.floor(fromStamp.valueOf() / 1000) + "&to=" + Math.floor(toStamp.valueOf() / 1000);
 
     makeHttpRequest(callingURL)
     .then(response =>
@@ -74,6 +107,7 @@ function parseAndPrintJSON(rawJSON: string, printingLocation: HTMLDivElement)
 
     // Print the results to the element specified by the parameter
     let resultTable = "<table>";
+    resultTable = "";
     // Row header preparation
     //resultTable += getProperTableHeading();
     if (resultantEntries.length == 0)
@@ -81,7 +115,7 @@ function parseAndPrintJSON(rawJSON: string, printingLocation: HTMLDivElement)
         printingLocation.innerHTML = "(Empty)";
         return;
     }
-    printingLocation.innerHTML = "Obtained " + resultantEntries.length + " entries.<br>";
+    printingLocation.innerHTML = "Obtained " + resultantEntries.length + " entries.<hr>";
     resultTable += resultantEntries[0].generateExemplaryRow();
 
     for (let i = 0; i < resultantEntries.length; i++)
@@ -89,6 +123,6 @@ function parseAndPrintJSON(rawJSON: string, printingLocation: HTMLDivElement)
         let currentEntry: TelegramEntry = resultantEntries[i];
         resultTable += currentEntry.generateTableRow();
     }
-    resultTable += "</table>";
+    //resultTable += "</table>";
     printingLocation.innerHTML += resultTable;
 }

@@ -1,10 +1,14 @@
+function initialize() {
+    initializeCurrentTimeInput();
+}
 function initializeCurrentTimeInput() {
     var nowVanilla = new Date();
     document.getElementsByName('toStampDate')[0].valueAsDate = nowVanilla;
     var hours = nowVanilla.getUTCHours();
     var minutes = nowVanilla.getUTCMinutes();
     hours = (hours + 8) % 24;
-    var properTime = hours + ":" + minutes;
+    // We need to fill in the 0 to make it double-digit
+    var properTime = ("0" + hours).slice(-2) + ":" + ("0" + minutes).slice(-2);
     document.getElementsByName('toStampTime')[0].value = properTime;
     console.log(properTime);
 }
@@ -20,8 +24,7 @@ function getToTimeStamp() {
     // Have to divide by 1000 to convert the value from milliseconds to seconds
     return new Date(rawDate + "T" + rawTime).valueOf() / 1000;
 }
-function conductSearch(printingLocation) {
-    printingLocation.innerHTML = "Contacting server...";
+function startStandardSearch(printingLocation) {
     var trueFromStamp = getFromTimestamp();
     var trueToStamp = getToTimeStamp();
     if (trueToStamp < trueFromStamp) {
@@ -31,9 +34,30 @@ function conductSearch(printingLocation) {
         trueFromStamp = temp;
         // Also update the input stuff.
     }
+    conductSearch(printingLocation, new Date(trueFromStamp * 1000), new Date(trueToStamp * 1000));
+}
+function startPastHourSearch(printingLocation, hoursRange) {
+    var now = new Date();
+    // 1 hour = 3600 seconds
+    var timeChange = 3600000 * hoursRange;
+    conductSearch(printingLocation, new Date(now.valueOf() - timeChange), now);
+}
+function startTodaySearch(printingLocation) {
+    var now = new Date();
+    var todayString = now.toISOString().slice(0, 10);
+    var todayBeginning = new Date(todayString);
+    conductSearch(printingLocation, todayBeginning, now);
+}
+function conductSearch(printingLocation, fromStamp, toStamp) {
+    var fromStamp_String = fromStamp.toLocaleString("en-US", { timeZone: "Asia/Hong_Kong" });
+    var toStamp_String = toStamp.toLocaleString("en-US", { timeZone: "Asia/Hong_Kong" });
+    document.getElementById("searchParams").innerHTML = "Searching posts from " + fromStamp_String + " to " + toStamp_String + ", Hong Kong time.";
+    printingLocation.innerHTML = "Contacting server...";
+    console.log(fromStamp.valueOf());
+    console.log(toStamp.valueOf());
     // Generate HTTP endpoint URL
     var apiEndpoint = "https://redditlive.norrisng.ca/api/get_posts?";
-    var callingURL = apiEndpoint + "from=" + trueFromStamp + "&to=" + trueToStamp;
+    var callingURL = apiEndpoint + "from=" + Math.floor(fromStamp.valueOf() / 1000) + "&to=" + Math.floor(toStamp.valueOf() / 1000);
     makeHttpRequest(callingURL)
         .then(function (response) {
         // Successfully obtained Reddit-TG entries.
@@ -53,18 +77,19 @@ function parseAndPrintJSON(rawJSON, printingLocation) {
     printingLocation.innerHTML = "";
     // Print the results to the element specified by the parameter
     var resultTable = "<table>";
+    resultTable = "";
     // Row header preparation
     //resultTable += getProperTableHeading();
     if (resultantEntries.length == 0) {
         printingLocation.innerHTML = "(Empty)";
         return;
     }
-    printingLocation.innerHTML = "Obtained " + resultantEntries.length + " entries.<br>";
+    printingLocation.innerHTML = "Obtained " + resultantEntries.length + " entries.<hr>";
     resultTable += resultantEntries[0].generateExemplaryRow();
     for (var i = 0; i < resultantEntries.length; i++) {
         var currentEntry = resultantEntries[i];
         resultTable += currentEntry.generateTableRow();
     }
-    resultTable += "</table>";
+    //resultTable += "</table>";
     printingLocation.innerHTML += resultTable;
 }
