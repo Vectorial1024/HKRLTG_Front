@@ -7,7 +7,7 @@
  * @param method Either "GET" or "POST", or it will be rejected; defaults to the "GET" HTTP method.
  * @param url Endpoint of request
  */
-function makeHttpRequest(method, url) {
+function makeHttpRequest(url, method) {
     if (method === void 0) { method = "GET"; }
     if (method != "GET" && method != "POST") {
         return null;

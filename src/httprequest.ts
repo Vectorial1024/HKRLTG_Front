@@ -7,7 +7,7 @@
  * @param method Either "GET" or "POST", or it will be rejected; defaults to the "GET" HTTP method.
  * @param url Endpoint of request
  */
-function makeHttpRequest(method: string = "GET", url: string): Promise<any>
+function makeHttpRequest(url: string, method: string = "GET"): Promise<any>
 {
     if (method != "GET" && method != "POST")
     {

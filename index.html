@@ -30,46 +30,40 @@
                 background-color: #dddddd;
             } */
         </style>
-        <script>
-            /*
-            // Sample JS object 
-            var geeks = { 
-                name: "Shubham", 
-                age: 21, 
-                Intern: "Geeksoforgeeks", 
-                Place: "Work from Home" 
-            };
-  
-            // Converting JS object to JSON string 
-            var gfg = JSON.stringify(geeks);
-            var back = JSON.parse(gfg);
-            document.write(back["name"]);
-            //JSON.stringify(value, replacer, space);
-            */
-        </script>
+        <script src="src/httprequest.js"></script>
         <script src="src/telegramentryraw.js"></script>
         <script src="src/telegramentry.js"></script>
         <script src="src/mainscript.js"></script>
+        <script>
+            function initialize()
+            {
+                let now = new Date();
+                document.getElementsByName('toStampDate')[0].valueAsDate = now;
+            }
+
+            document.addEventListener("DOMContentLoaded", initializeCurrentTimeInput);
+        </script>
     </head>
     <body>
         <div class="container">
             <!-- Reading the params -->
+            All time inputs should be in Hong Kong local time (UTC +8). Please convert your inputs somewhere else if necessary.
             <table>
                 <tr>
                     <td>From timestamp:</td>
-                    <td><input type="number" name="fromStamp" min="0"></td>
+                    <td><input type="date" name="fromStampDate" min="2018-02-17" value="2018-02-17"><input type="time" name="fromStampTime" min="00:00" value="00:00"></td>
                 </tr>
                 <tr>
                     <td>To timestamp:</td>
-                    <td><input type="number" name="toStamp" min="0"></td>
+                    <td><input type="date" name="toStampDate" min="2018-02-17"><input type="time" name="toStampTime" min="00:00" value="00:00"></td>
                 </tr>
             </table>
             <!-- Search button -->
             <input type="button" value="Search posts" onclick="conductSearch(document.getElementById('resultsTable'))">
             <div>
-                Search results:
+                Search results (sorted by latest first):
             </div>
-            <div id="resultsTable">
+            <div id="resultsTable" style="display: block; max-width: 800px;">
                 Please conduct search to begin.
             </div>
         </div>
