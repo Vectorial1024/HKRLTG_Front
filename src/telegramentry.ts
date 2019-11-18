@@ -20,10 +20,10 @@ class TelegramEntry
         // Begin.
         let tempText = this.text;
 
+        // Process embedded pic residue text
+        tempText = tempText.replace(/...&&&&.../g, "{Embedded pic}");
         // Convert \_ back into _
-        console.log(tempText);
         tempText = tempText.replace(/\\_/g, "_");
-        console.log(tempText);
         // Convert double-returns to paragraph breaks.
         tempText = tempText.replace(/\n\n/g, "</p><p>");
 
