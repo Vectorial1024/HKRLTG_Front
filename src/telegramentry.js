@@ -13,6 +13,8 @@ var TelegramEntry = /** @class */ (function () {
         tempText = tempText.replace(/...&&&&.../g, "{Embedded pic}");
         // Convert \_ back into _
         tempText = tempText.replace(/\\_/g, "_");
+        // Convert https raw text into clickable links
+        tempText = urlifyText(tempText);
         // Convert double-returns to paragraph breaks.
         tempText = tempText.replace(/\n\n/g, "</p><p>");
         // Conversion complete.
@@ -51,4 +53,17 @@ var TelegramEntry = /** @class */ (function () {
 function getProperTableHeading() {
     var heading = "<tr><th>Relevant posts</th></tr>";
     return heading;
+}
+/**
+ * Recognizes and converts https links to clickable HTML links.
+ *
+ * The links will have the open-in-new-tab attribute.
+ */
+function urlifyText(originalText) {
+    var urlRegex = /(https?:\/\/[^\s]+)/g;
+    return originalText.replace(urlRegex, function (url) {
+        return '<a href="' + url + '" target="_blank">' + url + '</a>';
+    });
+    // or alternatively
+    // return text.replace(urlRegex, '<a href="$1">$1</a>')
 }
