@@ -11,6 +11,8 @@ function initializeCurrentTimeInput() {
     var properTime = ("0" + hours).slice(-2) + ":" + ("0" + minutes).slice(-2);
     document.getElementsByName('toStampTime')[0].value = properTime;
     console.log(properTime);
+    // Also fill in for "on this day" input
+    document.getElementsByName('onStampDate')[0].valueAsDate = nowVanilla;
 }
 function getFromTimestamp() {
     var rawDate = document.getElementsByName("fromStampDate")[0].value;
@@ -47,6 +49,23 @@ function startTodaySearch(printingLocation) {
     var todayString = now.toISOString().slice(0, 10);
     var todayBeginning = new Date(todayString);
     conductSearch(printingLocation, todayBeginning, now);
+}
+function startSpecificDaySearch(printingLocation) {
+    /*
+    let rawDate = (document.getElementsByName("fromStampDate")[0] as HTMLInputElement).value;
+    let rawTime = (document.getElementsByName("fromStampTime")[0] as HTMLInputElement).value;
+    // Have to divide by 1000 to convert the value from milliseconds to seconds
+    return new Date(rawDate + "T" + rawTime).valueOf() / 1000;
+    */
+    var specifiedDay_Raw = (document.getElementsByName("onStampDate")[0]).value;
+    //console.log(specifiedDay_Raw);
+    //console.log(new Date(specifiedDay_Raw).valueOf() / 1000);
+    var specifiedDayBegin_Stamp = new Date(specifiedDay_Raw).valueOf();
+    //return new Date(specifiedDay_Raw).valueOf() / 1000;
+    var millisecondsInOneDay = 86400 * 1000;
+    console.log(specifiedDayBegin_Stamp);
+    console.log(specifiedDayBegin_Stamp + millisecondsInOneDay);
+    conductSearch(printingLocation, new Date(specifiedDayBegin_Stamp), new Date(specifiedDayBegin_Stamp + millisecondsInOneDay));
 }
 function conductSearch(printingLocation, fromStamp, toStamp) {
     var fromStamp_String = fromStamp.toLocaleString("en-US", { timeZone: "Asia/Hong_Kong" });

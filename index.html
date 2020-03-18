@@ -61,6 +61,10 @@
                     <td>To timestamp:</td>
                     <td><input type="date" name="toStampDate" min="2018-02-17"><input type="time" name="toStampTime" min="00:00" value="00:00"></td>
                 </tr>
+                <tr>
+                    <td>On this day:</td>
+                    <td><input type="date" name="onStampDate" min="2018-02-17"></td>
+                </tr>
             </table>
             <!-- Search buttons -->
             <input type="button" value="Search posts" onclick="startStandardSearch(document.getElementById('resultsTable'))">
@@ -68,6 +72,7 @@
             <input type="button" value="Past 8 hours" onclick="startPastHourSearch(document.getElementById('resultsTable'), 8)">
             <input type="button" value="Past 12 hours" onclick="startPastHourSearch(document.getElementById('resultsTable'), 12)">
             <input type="button" value="From 12AM today" onclick="startTodaySearch(document.getElementById('resultsTable'))">
+            <input type="button" value="On specified day" onclick="startSpecificDaySearch(document.getElementById('resultsTable'))">
             <div id="searchParams">
 
             </div>

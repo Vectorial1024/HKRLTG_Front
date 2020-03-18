@@ -13,7 +13,10 @@ function initializeCurrentTimeInput()
     // We need to fill in the 0 to make it double-digit
     let properTime = ("0" + hours).slice(-2) + ":" + ("0" + minutes).slice(-2);
     (document.getElementsByName('toStampTime')[0] as HTMLInputElement).value = properTime;
-    console.log(properTime)
+    console.log(properTime);
+
+    // Also fill in for "on this day" input
+    (document.getElementsByName('onStampDate')[0] as HTMLInputElement).valueAsDate = nowVanilla;
 }
 
 function getFromTimestamp(): number
@@ -64,6 +67,25 @@ function startTodaySearch(printingLocation: HTMLDivElement)
     let todayString = now.toISOString().slice(0, 10);
     let todayBeginning = new Date(todayString);
     conductSearch(printingLocation, todayBeginning, now);
+}
+
+function startSpecificDaySearch(printingLocation: HTMLDivElement)
+{
+    /*
+    let rawDate = (document.getElementsByName("fromStampDate")[0] as HTMLInputElement).value;
+    let rawTime = (document.getElementsByName("fromStampTime")[0] as HTMLInputElement).value;
+    // Have to divide by 1000 to convert the value from milliseconds to seconds
+    return new Date(rawDate + "T" + rawTime).valueOf() / 1000;
+    */
+    let specifiedDay_Raw = ((document.getElementsByName("onStampDate")[0]) as HTMLInputElement).value;
+    //console.log(specifiedDay_Raw);
+    //console.log(new Date(specifiedDay_Raw).valueOf() / 1000);
+    let specifiedDayBegin_Stamp = new Date(specifiedDay_Raw).valueOf();
+    //return new Date(specifiedDay_Raw).valueOf() / 1000;
+    const millisecondsInOneDay = 86400 * 1000;
+    console.log(specifiedDayBegin_Stamp);
+    console.log(specifiedDayBegin_Stamp + millisecondsInOneDay);
+    conductSearch(printingLocation, new Date(specifiedDayBegin_Stamp), new Date(specifiedDayBegin_Stamp + millisecondsInOneDay));
 }
 
 function conductSearch(printingLocation: HTMLDivElement, fromStamp: Date, toStamp: Date)
